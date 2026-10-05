@@ -519,8 +519,33 @@ class Ps_LegalCompliance extends Module
     public function hookDisplayOverrideTemplate($param)
     {
         if (isset($this->context->controller->php_self) && !$this->context->controller->ajax && ($this->context->controller->php_self == 'order')) {
+            // The core concatenates the string outputs of displayOverrideTemplate: if the One Page Checkout
+            // (ps_onepagecheckout, bundled since PrestaShop 9.2) also overrides the checkout template, both paths
+            // are joined into an invalid template path (Smarty fatal error). The OPC template already extends the
+            // full theme layout, footer included, which is the only purpose of this override.
+            if ($this->isOnePageCheckoutEnabled()) {
+                return null;
+            }
+
             return $this->getTemplatePath('hookDisplayOverrideTemplateFooter.tpl');
         }
+    }
+
+    /**
+     * Whether the One Page Checkout module is enabled and handles the checkout.
+     *
+     * @return bool
+     */
+    private function isOnePageCheckoutEnabled()
+    {
+        if (!Module::isEnabled('ps_onepagecheckout')) {
+            return false;
+        }
+        $onePageCheckout = Module::getInstanceByName('ps_onepagecheckout');
+
+        return $onePageCheckout
+            && method_exists($onePageCheckout, 'isOnePageCheckoutEnabled')
+            && $onePageCheckout->isOnePageCheckoutEnabled();
     }
 
     public function hookDisplayCheckoutSummaryTop($param)
